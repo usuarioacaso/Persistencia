@@ -7,20 +7,32 @@
 //
 
 import UIKit
+import CoreData
+
 
 class listaTabla: UITableViewController {
     
-    //var tablaLibros:NSDictionary = NSDictionary()
-    var tablaLibros:NSMutableArray! = NSMutableArray()
-
+    //var tablaLibros:NSMutableArray! = NSMutableArray()
+    var managedObjects = [NSManagedObject]()
+    
     override func viewDidLoad() {
         super.viewDidLoad()
+        recuperarDatos()
 
-        // Uncomment the following line to preserve selection between presentations
-        // self.clearsSelectionOnViewWillAppear = false
-
-        // Uncomment the following line to display an Edit button in the navigation bar for this view controller.
-        // self.navigationItem.rightBarButtonItem = self.editButtonItem()
+    }
+    
+    func recuperarDatos(){
+        
+        let delegado = UIApplication.sharedApplication().delegate as! AppDelegate // con esto llamamos al managedOjectContext que nos puso coredata al clicuear
+        let managedContext = delegado.managedObjectContext
+        let peticion = NSFetchRequest(entityName: "Libros")
+        do{
+            let resultadoPeticion = try managedContext.executeFetchRequest(peticion)
+            managedObjects = resultadoPeticion as! [NSManagedObject]
+            
+        }catch let error as NSError{
+            print("No se pudo recuperer datos, Error: \(error)")
+        }
     }
     
     @IBAction func retornoListaTabla(segue: UIStoryboardSegue)
@@ -28,14 +40,22 @@ class listaTabla: UITableViewController {
         let registroTabla = segue.sourceViewController as! buscaLibrosVC
         let textotitulo = registroTabla.muestraTitulo.text
         let textoautor = registroTabla.muestraAutor.text
-        let nuevoDic = ["ktitulo":textotitulo,"kautor":textoautor]
-        tablaLibros.addObject(nuevoDic)
+//        let nuevoDic = ["ktitulo":textotitulo,"kautor":textoautor]
+//        tablaLibros.addObject(nuevoDic)
+//        tableView.reloadData()
+        let delegado = UIApplication.sharedApplication().delegate as! AppDelegate
+        let managedContext = delegado.managedObjectContext
+        let entidad = NSEntityDescription.entityForName("Libros", inManagedObjectContext: managedContext)
+        let managedObject = NSManagedObject(entity: entidad!, insertIntoManagedObjectContext: managedContext)
+        managedObject.setValue(textotitulo, forKey: "titulo")
+        managedObject.setValue(textoautor, forKey: "autor")
+        do{
+            try managedContext.save()
+            managedObjects.append(managedObject)
+        }catch let error as NSError{
+            print("No se pudo guaradr los datos, error tipo\(error)")
+        }
         tableView.reloadData()
-    }
-
-    override func didReceiveMemoryWarning() {
-        super.didReceiveMemoryWarning()
-        // Dispose of any resources that can be recreated.
     }
 
     // MARK: - Table view data source
@@ -47,59 +67,22 @@ class listaTabla: UITableViewController {
 
     override func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         // #warning Incomplete implementation, return the number of rows
-        return tablaLibros.count
+        return managedObjects.count
     }
 
     override func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCellWithIdentifier("listaCelda", forIndexPath: indexPath)
         
-        let data = tablaLibros[indexPath.row] as! NSDictionary
-        //let data = tablaLibros[indexPath.row] as! String
-        let nombreTitulo = data["ktitulo"] as! String
-        print(nombreTitulo)
+//        let data = tablaLibros[indexPath.row] as! NSDictionary
+//        let nombreTitulo = data["ktitulo"] as! String
+//        print(nombreTitulo)
+        let managedObject = managedObjects[indexPath.row]
         
-        //let nombreAutor = data["kautor"] as! String
-        
-        cell.textLabel?.text = nombreTitulo
-        //cell.detailTextLabel?.text = nombreAutor
+        //cell.textLabel?.text = nombreTitulo
+        cell.textLabel?.text = managedObject.valueForKey("titulo") as? String
         
         return cell
     }
-
-    /*
-    // Override to support conditional editing of the table view.
-    override func tableView(tableView: UITableView, canEditRowAtIndexPath indexPath: NSIndexPath) -> Bool {
-        // Return false if you do not want the specified item to be editable.
-        return true
-    }
-    */
-
-    /*
-    // Override to support editing the table view.
-    override func tableView(tableView: UITableView, commitEditingStyle editingStyle: UITableViewCellEditingStyle, forRowAtIndexPath indexPath: NSIndexPath) {
-        if editingStyle == .Delete {
-            // Delete the row from the data source
-            tableView.deleteRowsAtIndexPaths([indexPath], withRowAnimation: .Fade)
-        } else if editingStyle == .Insert {
-            // Create a new instance of the appropriate class, insert it into the array, and add a new row to the table view
-        }    
-    }
-    */
-
-    /*
-    // Override to support rearranging the table view.
-    override func tableView(tableView: UITableView, moveRowAtIndexPath fromIndexPath: NSIndexPath, toIndexPath: NSIndexPath) {
-
-    }
-    */
-
-    /*
-    // Override to support conditional rearranging of the table view.
-    override func tableView(tableView: UITableView, canMoveRowAtIndexPath indexPath: NSIndexPath) -> Bool {
-        // Return false if you do not want the item to be re-orderable.
-        return true
-    }
-    */
 
     // MARK: - Navigation
 
@@ -112,9 +95,12 @@ class listaTabla: UITableViewController {
             
             let indexPath = tableView.indexPathForSelectedRow as NSIndexPath!
             
-            let data = tablaLibros[indexPath.row] as! NSDictionary
-            let titulo = data["ktitulo"] as! String
-            let autor = data["kautor"] as! String
+            //let data = tablaLibros[indexPath.row] as! NSDictionary
+            let managedObject = managedObjects[indexPath.row]
+            //let titulo = data["ktitulo"] as! String
+            //let autor = data["kautor"] as! String
+            let titulo = managedObject.valueForKey("titulo") as! String
+            let autor  = managedObject.valueForKey("autor") as! String
             
             let vistaDetalle = segue.destinationViewController as! detalleLibros
             vistaDetalle.nombreTitulo = titulo
